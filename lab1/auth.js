@@ -1,27 +1,24 @@
 const jwt = require("jsonwebtoken");
+const users = require('./usersData.json').users;
 require('dotenv').config();
 
 const verifyToken = (req, res, next) => {
+    const token = req.get(process.env.SESSION_KEY);
 
-    const token = req.get('Authorization'); //replace to env
-    if (!token) {
-        return res.status(403).send("A token is required for authentication");
-    }
+    let data;
     try {
-        const decoded = jwt.verify(token, process.env.TOKEN_KEY);
+        data = jwt.verify(token, process.env.TOKEN_KEY);
+    } catch (e) { }
 
-        const user = users.find(user => {
-            if (user.login == decoded.login) return true;
-            return false;
-        });
-
-        req.user = user;
-    } catch (err) {
-        return res.status(401).send("Invalid Token");
+    if (data) {
+        const user = users.find(u => u.login == data.login);
+        if (user) {
+            req.username = user.username;
+            req.sessionId = token;
+        }
     }
-    return next();
+
+    next();
 };
-
-
 
 module.exports = verifyToken;
