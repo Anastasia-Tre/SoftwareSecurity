@@ -1,6 +1,6 @@
-var request = require("request");
+const request = require("request");
 
-var options = {
+const options = {
     method: 'POST',
     url: 'https://kpi.eu.auth0.com/oauth/token',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
