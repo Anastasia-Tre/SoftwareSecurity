@@ -1,22 +1,4 @@
-const request = require("request");
 require('dotenv').config();
-
-const userData = {
-    "email": "anastasiia.trembach@gmail.com",
-    "user_metadata": {},
-    "blocked": false,
-    "email_verified": false,
-    "app_metadata": {},
-    "given_name": "Anastasiia",
-    "family_name": "Trembach",
-    "name": "Anastasiia Trembach",
-    "nickname": "NASA",
-    "picture": "https://secure.gravatar.com/avatar/15626c5e0c749cb912f9d1ad48dba440?s=480&r=pg&d=https%3A%2F%2Fssl.gstatic.com%2Fs2%2Fprofiles%2Fimages%2Fsilhouette80.png",
-    "user_id": "nasa",
-    "connection": "Username-Password-Authentication",
-    "password": "Anas2712",
-    "verify_email": false
-}
 
 const tokenOptions = () => ({
     method: 'POST',
@@ -31,14 +13,29 @@ const tokenOptions = () => ({
     }
 });
 
-const createUserOptions = (token) => ({
+const createUserOptions = (token, name, familyname, login, password) => ({
     method: 'POST',
     url: `${process.env.MY_URL}/api/v2/users`,
     headers: {
         'content-type': 'application/json',
         'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify(user)
+    body: JSON.stringify({
+        "email": login,
+        "user_metadata": {},
+        "blocked": false,
+        "email_verified": false,
+        "app_metadata": {},
+        "given_name": name,
+        "family_name": familyname,
+        "name": `${name} ${familyname}`,
+        "nickname": name,
+        "picture": "https://secure.gravatar.com/avatar/15626c5e0c749cb912f9d1ad48dba440?s=480&r=pg&d=https%3A%2F%2Fssl.gstatic.com%2Fs2%2Fprofiles%2Fimages%2Fsilhouette80.png",
+        "user_id": login,
+        "connection": "Username-Password-Authentication",
+        "password": password,
+        "verify_email": false
+    })
 });
 
 const userTokenOptions = (username, password) => ({
@@ -70,18 +67,9 @@ const refreshTokenOptions = (refresh_token) => ({
     }
 });
 
-const makeRequest = async (options) => {
-    await request(options, function (error, response, body) {
-        if (error) throw new Error(error);
-        console.log(body);
-        return body;
-    });
-}
-
 module.exports = {
     tokenOptions,
     createUserOptions,
     userTokenOptions,
-    refreshTokenOptions,
-    makeRequest
+    refreshTokenOptions
 }

@@ -23,6 +23,8 @@
                 <input type="password" name="password" id="password-field" class="login-form-field" placeholder="Password">
                 <input type="submit" value="Login" id="login-form-submit">
             </form>
+            
+            <a id="register-link" class="redirect-link" href="/register">Don't have an account? Register</a>
 
         </main>
     </body>
@@ -114,6 +116,10 @@
             cursor: pointer;
             outline: none;
         }
+
+        .redirect-link {
+            color: #3d3d3d;
+        }
     </style>
 
     <script>
@@ -143,6 +149,7 @@
 
                     mainHolder.append(`Hello ${username}`);
                     logoutLink.style.opacity = 1;
+                    registerLink.style.opacity = -1;
                 }
             });
         }
@@ -152,6 +159,7 @@
         const loginButton = document.getElementById("login-form-submit");
         const loginErrorMsg = document.getElementById("login-error-msg");
         const logoutLink =  document.getElementById("logout");
+        const registerLink = document.getElementById("register-link");
 
         logoutLink.addEventListener("click", (e) => {
             e.preventDefault();

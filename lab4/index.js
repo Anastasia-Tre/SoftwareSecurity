@@ -8,7 +8,7 @@ const { promisify } = require('util');
 const request = promisify(requestCallback);
 const httpConstants = require('http-constants');
 
-const { refreshTokenOptions, userTokenOptions } = require('./requests');
+const { createUserOptions, tokenOptions, refreshTokenOptions, userTokenOptions } = require('./requests');
 
 const port = process.env.PORT;
 const app = express();
@@ -57,7 +57,6 @@ app.use(async (req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-    console.log(`req.session.username ${req.session.username}`);
     if (req.session.username) {
         return res.json({
             username: req.session.username,
@@ -76,10 +75,8 @@ app.post('/api/login', async (req, res) => {
     const { login, password } = req.body;
 
     const response = await request(userTokenOptions(login, password));
-    //console.log(response.body);
     if (response.statusCode == httpConstants.codes.OK) {
         const auth = JSON.parse(response.body);
-        //req.session.username = auth.username;
         req.session.username = login;
         req.session.accessToken = auth.access_token;
         req.session.refreshToken = auth.refresh_token;
@@ -96,9 +93,28 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.get("/register", async (req, res) => {
-    const { login, password } = req.body;
+app.get('/register', (req, res) => {
+    res.sendFile(path.join(__dirname + '/register.html'));
+});
+
+app.post("/api/register", async (req, res) => {
+    const { name, familyname, login, password } = req.body;
     
+    const tokenResponse = await request(tokenOptions());
+    const accessToken = JSON.parse(tokenResponse.body).access_token;
+    console.log(`App Token: ${accessToken}`);
+
+    const response = await request(createUserOptions(accessToken, name, familyname, login, password));
+    if (response.statusCode == httpConstants.codes.CREATED) {
+        console.log(`User ${login} registered`);
+        req.session.username = login;
+        res.json({ redirect: '/' });
+    }
+    else {
+        const error = JSON.parse(response.body);;
+        console.log(`Register failed: ${error}`);
+        res.status(401).send(error);
+    }
 });
 
 app.listen(port, () => {
