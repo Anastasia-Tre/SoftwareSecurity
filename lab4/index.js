@@ -1,72 +1,46 @@
-const uuid = require('uuid');
 const express = require('express');
 const onFinished = require('on-finished');
 const bodyParser = require('body-parser');
 const path = require('path');
-const port = 3000;
-const fs = require('fs');
+const jwt = require("jsonwebtoken");
+const requestCallback = require("request");
+const { promisify } = require('util');
+const request = promisify(requestCallback);
+const httpConstants = require('http-constants');
 
+const { refreshTokenOptions, userTokenOptions } = require('./requests');
+
+const port = process.env.PORT;
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const SESSION_KEY = 'Authorization';
-
-class Session {
-    #sessions = {}
-
-    constructor() {
-        try {
-            this.#sessions = fs.readFileSync('./sessions.json', 'utf8');
-            this.#sessions = JSON.parse(this.#sessions.trim());
-
-            console.log(this.#sessions);
-        } catch(e) {
-            this.#sessions = {};
-        }
-    }
-
-    #storeSessions() {
-        fs.writeFileSync('./sessions.json', JSON.stringify(this.#sessions), 'utf-8');
-    }
-
-    set(key, value) {
-        if (!value) {
-            value = {};
-        }
-        this.#sessions[key] = value;
-        this.#storeSessions();
-    }
-
-    get(key) {
-        return this.#sessions[key];
-    }
-
-    init(res) {
-        const sessionId = uuid.v4();
-        this.set(sessionId);
-
-        return sessionId;
-    }
-
-    destroy(req, res) {
-        const sessionId = req.sessionId;
-        delete this.#sessions[sessionId];
-        this.#storeSessions();
-    }
-}
-
+const Session = require('./Session');
 const sessions = new Session();
 
-app.use((req, res, next) => {
-    let currentSession = {};
-    let sessionId = req.get(SESSION_KEY);
+const isTokenExpired = (token, delay = 5) => {
+    const { exp } = jwt.decode(token);
+    const now = Math.floor(Date.now() / 1e3);
+    return exp - now < delay;
+}
 
+app.use(async (req, res, next) => {
+    let currentSession = {};
+    let sessionId = req.get(process.env.SESSION_KEY);
+    //console.log(`sessionId: ${sessionId}`);
     if (sessionId) {
         currentSession = sessions.get(sessionId);
+        //console.log(`currentSession ${currentSession}`);
         if (!currentSession) {
             currentSession = {};
             sessionId = sessions.init(res);
+        } else if (currentSession.username &&
+            isTokenExpired(currentSession.accessToken)) {
+
+            const response = await request(refreshTokenOptions(currentSession.refreshToken));
+            if (response.statusCode != httpConstants.codes.OK) {
+                console.log(`Could not refresh token: ${response.text}`);
+            }
         }
     } else {
         sessionId = sessions.init(res);
@@ -74,24 +48,23 @@ app.use((req, res, next) => {
 
     req.session = currentSession;
     req.sessionId = sessionId;
-
     onFinished(req, () => {
         const currentSession = req.session;
         const sessionId = req.sessionId;
         sessions.set(sessionId, currentSession);
     });
-
     next();
 });
 
 app.get('/', (req, res) => {
+    console.log(`req.session.username ${req.session.username}`);
     if (req.session.username) {
         return res.json({
             username: req.session.username,
             logout: 'http://localhost:3000/logout'
         })
     }
-    res.sendFile(path.join(__dirname+'/index.html'));
+    res.sendFile(path.join(__dirname, '/index.html'));
 })
 
 app.get('/logout', (req, res) => {
@@ -99,39 +72,36 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-const users = [
-    {
-        login: 'Login',
-        password: 'Password',
-        username: 'Username',
-    },
-    {
-        login: 'Login1',
-        password: 'Password1',
-        username: 'Username1',
-    }
-]
-
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { login, password } = req.body;
 
-    const user = users.find((user) => {
-        if (user.login == login && user.password == password) {
-            return true;
-        }
-        return false
-    });
+    const response = await request(userTokenOptions(login, password));
+    //console.log(response.body);
+    if (response.statusCode == httpConstants.codes.OK) {
+        const auth = JSON.parse(response.body);
+        //req.session.username = auth.username;
+        req.session.username = login;
+        req.session.accessToken = auth.access_token;
+        req.session.refreshToken = auth.refresh_token;
 
-    if (user) {
-        req.session.username = user.username;
-        req.session.login = user.login;
+        console.log(`User ${login} login`)
+        console.log(`Access Token: ${auth.access_token}`);
+        console.log(`Refresh Token: ${auth.refresh_token}`);
 
         res.json({ token: req.sessionId });
+    } else {
+        const error = JSON.parse(response.body);;
+        console.log(`Login failed: ${error}`);
+        res.status(401).send(error);
     }
+});
 
-    res.status(401).send();
+app.get("/register", async (req, res) => {
+    const { login, password } = req.body;
+    
 });
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+

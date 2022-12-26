@@ -1,3 +1,4 @@
+const request = require("request");
 require('dotenv').config();
 
 const userData = {
@@ -23,8 +24,8 @@ const tokenOptions = () => ({
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     form:
     {
-        client_id: process.env.KPI_CLIENT_ID,
-        client_secret: process.env.KPI_CLIENT_SECRET,
+        client_id: process.env.MY_CLIENT_ID,
+        client_secret: process.env.MY_CLIENT_SECRET,
         audience: `${process.env.MY_URL}/api/v2/`,
         grant_type: 'client_credentials'
     }
@@ -40,19 +41,19 @@ const createUserOptions = (token) => ({
     body: JSON.stringify(user)
 });
 
-const userTokenOptions = () => ({
+const userTokenOptions = (username, password) => ({
     method: 'POST',
     url: `${process.env.MY_URL}/oauth/token`,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
         grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
-        username: userData.email,
-        password: userData.password,
+        username: username,
+        password: password,
         audience: `${process.env.MY_URL}/api/v2/`,
         scope: 'offline_access',
         realm: 'Username-Password-Authentication',
-        client_id: process.env.KPI_CLIENT_ID,
-        client_secret: process.env.KPI_CLIENT_SECRET
+        client_id: process.env.MY_CLIENT_ID,
+        client_secret: process.env.MY_CLIENT_SECRET
     })
 });
 
@@ -63,15 +64,24 @@ const refreshTokenOptions = (refresh_token) => ({
     form:
     {
         grant_type: 'refresh_token',
-        client_id: process.env.KPI_CLIENT_ID,
-        client_secret: process.env.KPI_CLIENT_SECRET,
+        client_id: process.env.MY_CLIENT_ID,
+        client_secret: process.env.MY_CLIENT_SECRET,
         refresh_token: refresh_token
     }
 });
+
+const makeRequest = async (options) => {
+    await request(options, function (error, response, body) {
+        if (error) throw new Error(error);
+        console.log(body);
+        return body;
+    });
+}
 
 module.exports = {
     tokenOptions,
     createUserOptions,
     userTokenOptions,
-    refreshTokenOptions
+    refreshTokenOptions,
+    makeRequest
 }
