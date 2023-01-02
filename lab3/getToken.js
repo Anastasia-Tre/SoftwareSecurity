@@ -7,7 +7,7 @@ const options = {
     body: JSON.stringify({
         grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
         username: 'anastasiia1@gmail.com',
-        password: 'Anas2712',
+        password: 'Anas27121',
         audience: 'https://dev-ciwhcmj0fbgydwdm.us.auth0.com/api/v2/',
         scope: 'offline_access',
         realm: 'Username-Password-Authentication',

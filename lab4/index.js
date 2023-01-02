@@ -18,7 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const Session = require('./Session');
 const sessions = new Session();
 
-const isTokenExpired = (token, delay = 5) => {
+const isTokenExpired = (token, delay = 86400 - 5) => {
     const { exp } = jwt.decode(token);
     const now = Math.floor(Date.now() / 1e3);
     return exp - now < delay;
@@ -27,19 +27,20 @@ const isTokenExpired = (token, delay = 5) => {
 app.use(async (req, res, next) => {
     let currentSession = {};
     let sessionId = req.get(process.env.SESSION_KEY);
-    //console.log(`sessionId: ${sessionId}`);
     if (sessionId) {
         currentSession = sessions.get(sessionId);
-        //console.log(`currentSession ${currentSession}`);
         if (!currentSession) {
             currentSession = {};
             sessionId = sessions.init(res);
         } else if (currentSession.username &&
             isTokenExpired(currentSession.accessToken)) {
-
             const response = await request(refreshTokenOptions(currentSession.refreshToken));
             if (response.statusCode != httpConstants.codes.OK) {
-                console.log(`Could not refresh token: ${response.text}`);
+                console.log(`Could not refresh token: ${currentSession.refreshToken}`);
+            }
+            else {
+                currentSession.accessToken = JSON.parse(response.body).access_token
+                console.log(`New Token: ${currentSession.accessToken}`);
             }
         }
     } else {
@@ -83,6 +84,7 @@ app.post('/api/login', async (req, res) => {
 
         console.log(`User ${login} login`)
         console.log(`Access Token: ${auth.access_token}`);
+        console.log(`Token expire in: ${auth.expires_in}`)
         console.log(`Refresh Token: ${auth.refresh_token}`);
 
         res.json({ token: req.sessionId });
