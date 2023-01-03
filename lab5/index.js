@@ -2,13 +2,13 @@ const express = require('express');
 const onFinished = require('on-finished');
 const bodyParser = require('body-parser');
 const path = require('path');
-const jwt = require("jsonwebtoken");
 const requestCallback = require("request");
 const { promisify } = require('util');
 const request = promisify(requestCallback);
 const httpConstants = require('http-constants');
 
 const { createUserOptions, tokenOptions, refreshTokenOptions, userTokenOptions } = require('./requests');
+const { jwtCheck, isTokenExpired } = require('./utils');
 
 const port = process.env.PORT;
 const app = express();
@@ -17,12 +17,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const Session = require('./Session');
 const sessions = new Session();
-
-const isTokenExpired = (token, delay = 86400 - 5) => {
-    const { exp } = jwt.decode(token);
-    const now = Math.floor(Date.now() / 1e3);
-    return exp - now < delay;
-}
 
 app.use(async (req, res, next) => {
     let currentSession = {};
@@ -35,6 +29,7 @@ app.use(async (req, res, next) => {
         } else if (currentSession.username &&
             isTokenExpired(currentSession.accessToken)) {
             const response = await request(refreshTokenOptions(currentSession.refreshToken));
+
             if (response.statusCode != httpConstants.codes.OK) {
                 console.log(`Could not refresh token: ${currentSession.refreshToken}`);
             }
@@ -43,6 +38,7 @@ app.use(async (req, res, next) => {
                 console.log(`New Token: ${currentSession.accessToken}`);
             }
         }
+        
     } else {
         sessionId = sessions.init(res);
     }
@@ -87,7 +83,11 @@ app.post('/api/login', async (req, res) => {
         console.log(`Token expire in: ${auth.expires_in}`)
         console.log(`Refresh Token: ${auth.refresh_token}`);
 
-        res.json({ token: req.sessionId });
+        res.json({ 
+            accessToken: auth.access_token,
+            refreshToken: auth.refresh_token,
+            token: req.sessionId
+        });
     } else {
         const error = JSON.parse(response.body);;
         console.log(`Login failed: ${error}`);
@@ -117,6 +117,11 @@ app.post("/api/register", async (req, res) => {
         console.log(`Register failed: ${error}`);
         res.status(401).send(error);
     }
+});
+
+app.get('/secret', jwtCheck, (req, res) => {
+    console.log(`It is a secret page`);
+    res.send(`It is very secret page!!!`);
 });
 
 app.listen(port, () => {

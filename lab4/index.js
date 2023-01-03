@@ -35,6 +35,7 @@ app.use(async (req, res, next) => {
         } else if (currentSession.username &&
             isTokenExpired(currentSession.accessToken)) {
             const response = await request(refreshTokenOptions(currentSession.refreshToken));
+            console.log("Refresh token");
             if (response.statusCode != httpConstants.codes.OK) {
                 console.log(`Could not refresh token: ${currentSession.refreshToken}`);
             }
