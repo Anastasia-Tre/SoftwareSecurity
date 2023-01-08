@@ -24,7 +24,10 @@
             <input type="text" name="login" id="username-field" class="login-form-field" placeholder="Username">
             <input type="password" name="password" id="password-field" class="login-form-field" placeholder="Password">
             <input type="submit" value="Login" id="login-form-submit">
+            <input type="submit" value="Login IDP" id="login-idp">
         </form>
+
+        <!-- <a href="/login-idp" id="login-idp">Login IDP</a> -->
 
         <a id="register-link" class="redirect-link" href="/register">Don't have an account? Register</a>
 
@@ -49,6 +52,22 @@
 
     #logout {
         opacity: 0;
+    }
+
+    #login-idp {
+        width: 45%;
+        padding: 7px;
+        margin-top: 5px;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        background-color: #3a3a3a;
+        cursor: pointer;
+        outline: none;
+        align-self: flex-start;
+        display: grid;
+        justify-items: center;
+        align-items: center;
     }
 
     #secret {
@@ -142,25 +161,28 @@
 </style>
 
 <script>
-    const session = sessionStorage.getItem('session');
+    
 
     let token;
     let accessToken;
+    let username;
 
     try {
+        const session = sessionStorage.getItem('session');
         accessToken = JSON.parse(session).accessToken;
         token = JSON.parse(session).token;
+        username = JSON.parse(session).username;
     } catch (e) { }
 
-    if (token) {
+    if (accessToken) {
         axios.get('/', {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 "Auth_key": token
             }
         }).then((response) => {
-            const { username } = response.data;
-
+            username = username || response.data.username;
+            console.log(username);
             if (username) {
                 const mainHolder = document.getElementById("main-holder");
                 const loginHeader = document.getElementById("login-header");
@@ -184,9 +206,11 @@
     const logoutLink = document.getElementById("logout");
     const registerLink = document.getElementById("register-link");
     const secretLink = document.getElementById("secret");
+    const loginIdp = document.getElementById("login-idp");
 
     logoutLink.addEventListener("click", (e) => {
         e.preventDefault();
+        const session = sessionStorage.getItem('session');
         sessionStorage.removeItem('session');
         location.reload();
     });
@@ -218,11 +242,18 @@
             }
         }).then((response) => {
             const { username } = response.data;
+            const session = sessionStorage.getItem('session');
             sessionStorage.setItem('session', JSON.stringify(response.data));
             location.reload();
         }).catch((response) => {
             loginErrorMsg.style.opacity = 1;
         });
+    });
+
+    loginIdp.addEventListener("click", (e) => {
+        console.log('in login idp')
+        e.preventDefault();
+        location.replace('/login-idp');
     })
 </script>
 

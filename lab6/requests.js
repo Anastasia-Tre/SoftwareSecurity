@@ -67,8 +67,24 @@ const refreshTokenOptions = (refresh_token) => ({
     }
 });
 
+const userTokenByCodeOptions = (code) => ({
+    method: 'POST',
+    url: `${process.env.MY_URL}/oauth/token`,
+    headers: {'content-type': 'application/x-www-form-urlencoded'},
+    form: {
+        grant_type: 'authorization_code',
+        code: code,
+        audience: `${process.env.MY_URL}/api/v2/`,
+        scope: 'offline_access',
+        client_id: process.env.MY_CLIENT_ID,
+        client_secret: process.env.MY_CLIENT_SECRET,
+        redirect_uri: 'http://localhost:3000/'
+    }
+});
+
 module.exports = {
     tokenOptions,
+    userTokenByCodeOptions,
     createUserOptions,
     userTokenOptions,
     refreshTokenOptions

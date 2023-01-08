@@ -7,8 +7,14 @@ const { promisify } = require('util');
 const request = promisify(requestCallback);
 const httpConstants = require('http-constants');
 
-const { createUserOptions, tokenOptions, refreshTokenOptions, userTokenOptions } = require('./requests');
+const { createUserOptions, tokenOptions, refreshTokenOptions, 
+    userTokenOptions, userTokenByCodeOptions } = require('./requests');
 const { jwtCheck, isTokenExpired } = require('./utils');
+
+const fs = require('fs');
+const set_token_response_template = fs.readFileSync('./response.html', 'utf8');
+const set_token_response = (session) => set_token_response_template.replace('REPLACE_SESSION', session);
+
 
 const port = process.env.PORT;
 const app = express();
@@ -16,6 +22,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const Session = require('./Session');
+const { verify } = require('crypto');
 const sessions = new Session();
 
 app.use(async (req, res, next) => {
@@ -53,14 +60,33 @@ app.use(async (req, res, next) => {
     next();
 });
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
     if (req.session.username) {
         return res.json({
             username: req.session.username,
             logout: 'http://localhost:3000/logout'
         })
+    } else if (req.query.code) {
+		try {
+			const response = await request(userTokenByCodeOptions(req.query.code));
+            const { access_token, refresh_token, expires_in } = JSON.parse(response.body);
+            
+            console.log({ access_token, refresh_token, expires_in });
+
+            const temp = verify
+
+			if (access_token) {
+				const data = { accessToken: access_token, username: 'Test' };
+				return res.send(set_token_response(JSON.stringify(data)));
+			}
+		} catch (e) {
+			console.log(e);
+		}
+		return res.status(401).send();
+	}
+    else {
+        res.sendFile(path.join(__dirname, '/index.html'));
     }
-    res.sendFile(path.join(__dirname, '/index.html'));
 })
 
 app.get('/logout', (req, res) => {
@@ -122,6 +148,18 @@ app.post("/api/register", async (req, res) => {
 app.get('/secret', jwtCheck, (req, res) => {
     console.log(`It is a secret page`);
     res.send(`It is very secret page!!!`);
+});
+
+app.get('/login-idp', (req, res) => {
+	res.redirect(
+		`${process.env.MY_URL}/authorize?`+
+		`audience=${process.env.MY_URL}/api/v2/&`+
+		`scope=offline_access&`+
+		`response_type=code&`+
+		`client_id=${process.env.MY_CLIENT_ID}&`+
+		`redirect_uri=http://localhost:3000/&`+
+		`response_mode=query`
+	);
 });
 
 app.listen(port, () => {
