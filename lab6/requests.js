@@ -82,10 +82,20 @@ const userTokenByCodeOptions = (code) => ({
     }
 });
 
+const userOptions = (token, user_id) => ({
+	method: 'GET',
+	url: `${process.env.MY_URL}/api/v2/users/${user_id}`,
+	headers: {
+		'content-type': 'application/json',
+		'Authorization': `Bearer ${token}`,
+	}
+});
+
 module.exports = {
     tokenOptions,
     userTokenByCodeOptions,
     createUserOptions,
     userTokenOptions,
-    refreshTokenOptions
+    refreshTokenOptions,
+    userOptions
 }

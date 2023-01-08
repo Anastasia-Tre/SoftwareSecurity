@@ -27,8 +27,6 @@
             <input type="submit" value="Login IDP" id="login-idp">
         </form>
 
-        <!-- <a href="/login-idp" id="login-idp">Login IDP</a> -->
-
         <a id="register-link" class="redirect-link" href="/register">Don't have an account? Register</a>
 
     </main>
@@ -182,7 +180,6 @@
             }
         }).then((response) => {
             username = username || response.data.username;
-            console.log(username);
             if (username) {
                 const mainHolder = document.getElementById("main-holder");
                 const loginHeader = document.getElementById("login-header");
@@ -251,7 +248,6 @@
     });
 
     loginIdp.addEventListener("click", (e) => {
-        console.log('in login idp')
         e.preventDefault();
         location.replace('/login-idp');
     })

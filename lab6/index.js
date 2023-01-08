@@ -6,9 +6,10 @@ const requestCallback = require("request");
 const { promisify } = require('util');
 const request = promisify(requestCallback);
 const httpConstants = require('http-constants');
+const jwt = require("jsonwebtoken");
 
 const { createUserOptions, tokenOptions, refreshTokenOptions, 
-    userTokenOptions, userTokenByCodeOptions } = require('./requests');
+    userTokenOptions, userTokenByCodeOptions, userOptions } = require('./requests');
 const { jwtCheck, isTokenExpired } = require('./utils');
 
 const fs = require('fs');
@@ -22,7 +23,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const Session = require('./Session');
-const { verify } = require('crypto');
 const sessions = new Session();
 
 app.use(async (req, res, next) => {
@@ -73,10 +73,16 @@ app.get('/', async (req, res) => {
             
             console.log({ access_token, refresh_token, expires_in });
 
-            const temp = verify
+            const payload = jwt.decode(access_token);
+			const user_id = payload.sub;
+            const tokenResponse = await request(tokenOptions());
+            const appToken = JSON.parse(tokenResponse.body).access_token;
+            const userResponse = await request(userOptions(appToken, user_id));
+            const { nickname } = JSON.parse(userResponse.body);
+            console.log(nickname);
 
 			if (access_token) {
-				const data = { accessToken: access_token, username: 'Test' };
+				const data = { accessToken: access_token, username: nickname };
 				return res.send(set_token_response(JSON.stringify(data)));
 			}
 		} catch (e) {
